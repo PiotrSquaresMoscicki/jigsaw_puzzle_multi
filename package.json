@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node server/server.js",
-    "test": "mocha test/**/*.test.js --timeout 10000"
+    "test": "npx mocha test/**/*.test.js --timeout 10000"
   },
   "keywords": [
     "jigsaw",
