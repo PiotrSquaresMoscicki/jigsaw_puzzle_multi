@@ -20,5 +20,6 @@
   },
   "forwardPorts": [8080],
   "postCreateCommand": "npm install",
+  "postStartCommand": "npm install",
   "remoteUser": "node"
 }

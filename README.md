@@ -31,6 +31,19 @@ Open `client/index.html` in your web browser, or navigate to `http://localhost:8
 
 Multiple tabs can be opened to simulate multiple players.
 
+## Testing
+
+Run the integration tests to verify that multiple clients can connect simultaneously:
+
+```bash
+npm test
+```
+
+The test suite includes:
+- Integration test for four simultaneous client connections
+- Verification of server-side client tracking
+- Verification that all clients receive proper updates
+
 ## Development
 
 The project can be opened in GitHub Codespaces with the devcontainer configuration included.
@@ -44,6 +57,8 @@ The project can be opened in GitHub Codespaces with the devcontainer configurati
 ├── client/         # Web client
 │   ├── index.html  # Client UI
 │   └── client.js   # Client-side logic
+├── test/           # Integration tests
+│   └── integration.test.js
 └── package.json    # Project dependencies
 ```
 
