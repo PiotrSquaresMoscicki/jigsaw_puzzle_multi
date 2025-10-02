@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jigsaw Puzzle Multi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .status.connected {
+            background: #10b981;
+            color: white;
+        }
+
+        .status.disconnected {
+            background: #ef4444;
+            color: white;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .sidebar h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .client-info {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .client-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .client-info strong {
+            color: #333;
+        }
+
+        .clients-list {
+            list-style: none;
+        }
+
+        .client-item {
+            background: #f9fafb;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+
+        .client-item:hover {
+            transform: translateX(5px);
+            background: #f3f4f6;
+        }
+
+        .client-item.current {
+            border-left-color: #10b981;
+            background: #d1fae5;
+        }
+
+        .client-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .client-id {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .game-area {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .placeholder {
+            color: #999;
+        }
+
+        .placeholder h2 {
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+
+        .placeholder p {
+            font-size: 18px;
+        }
+
+        .empty-state {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧩 Jigsaw Puzzle Multi</h1>
+            <p>
+                Connection: <span class="status disconnected" id="connection-status">Disconnected</span>
+            </p>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <h2>Your Info</h2>
+                <div class="client-info" id="client-info">
+                    <p><strong>ID:</strong> <span id="your-id">-</span></p>
+                    <p><strong>Name:</strong> <span id="your-name">-</span></p>
+                </div>
+
+                <h2>Connected Players (<span id="client-count">0</span>)</h2>
+                <ul class="clients-list" id="clients-list">
+                    <li class="empty-state">No clients connected</li>
+                </ul>
+            </aside>
+
+            <main class="game-area">
+                <div class="placeholder">
+                    <h2>🎮 Game Area</h2>
+                    <p>Puzzle game will be displayed here</p>
+                    <p style="margin-top: 10px; font-size: 14px; color: #666;">
+                        Open this page in multiple tabs to see multiple players!
+                    </p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html>

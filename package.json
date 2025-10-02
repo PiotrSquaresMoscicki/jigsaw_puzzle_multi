@@ -1,0 +1,21 @@
+{
+  "name": "jigsaw-puzzle-multi",
+  "version": "1.0.0",
+  "description": "A multiplayer jigsaw puzzle game",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "keywords": [
+    "jigsaw",
+    "puzzle",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "Piotr Squares Moscicki",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}
