@@ -5,7 +5,8 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "dev": "node server/server.js"
+    "dev": "node server/server.js",
+    "test": "mocha test/**/*.test.js --timeout 10000"
   },
   "keywords": [
     "jigsaw",
@@ -17,5 +18,9 @@
   "license": "MIT",
   "dependencies": {
     "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "mocha": "^10.2.0",
+    "chai": "^4.3.10"
   }
 }
