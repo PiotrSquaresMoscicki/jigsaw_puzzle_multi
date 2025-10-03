@@ -15,33 +15,42 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
+            height: 100%;
         }
 
-        header {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+        .status-overlay {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 18px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
+        .status-overlay-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .status {
             display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .status.connected {
@@ -54,87 +63,27 @@
             color: white;
         }
 
-        .main-content {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-        }
-
-        .sidebar {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            height: fit-content;
-        }
-
-        .sidebar h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 20px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .client-info {
-            background: #f3f4f6;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .client-info p {
-            margin: 5px 0;
-            color: #555;
-        }
-
-        .client-info strong {
-            color: #333;
-        }
-
-        .clients-list {
-            list-style: none;
-        }
-
-        .client-item {
-            background: #f9fafb;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            border-left: 4px solid #667eea;
-            transition: transform 0.2s;
-        }
-
-        .client-item:hover {
-            transform: translateX(5px);
-            background: #f3f4f6;
-        }
-
-        .client-item.current {
-            border-left-color: #10b981;
-            background: #d1fae5;
-        }
-
-        .client-name {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 3px;
-        }
-
-        .client-id {
-            font-size: 12px;
+        .status-label {
             color: #666;
+            font-weight: 500;
+        }
+
+        .players-count {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .main-content {
+            width: 100%;
+            height: 100%;
         }
 
         .game-area {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            min-height: 500px;
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            padding: 0;
         }
 
         .puzzle-board {
@@ -143,10 +92,6 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            min-height: 400px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 2px dashed #d1d5db;
         }
 
         .puzzle-grid {
@@ -166,12 +111,12 @@
         }
 
         .pieces-tray {
-            background: #f3f4f6;
-            border-radius: 8px;
-            padding: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
             overflow-x: auto;
             overflow-y: hidden;
             white-space: nowrap;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .pieces-tray h3 {
@@ -179,6 +124,7 @@
             color: #374151;
             margin-bottom: 10px;
             white-space: normal;
+            font-weight: 600;
         }
 
         .pieces-container {
@@ -250,35 +196,29 @@
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
+            .status-overlay {
+                font-size: 12px;
+                padding: 10px 14px;
+                top: 10px;
+                left: 10px;
             }
         }
     </style>
 </head>
 <body>
+    <div class="status-overlay">
+        <div class="status-overlay-row">
+            <span class="status-label">Connection:</span>
+            <span class="status disconnected" id="connection-status">Disconnected</span>
+        </div>
+        <div class="status-overlay-row">
+            <span class="status-label">Players:</span>
+            <span class="players-count" id="client-count">0</span>
+        </div>
+    </div>
+
     <div class="container">
-        <header>
-            <h1>🧩 Jigsaw Puzzle Multi</h1>
-            <p>
-                Connection: <span class="status disconnected" id="connection-status">Disconnected</span>
-            </p>
-        </header>
-
         <div class="main-content">
-            <aside class="sidebar">
-                <h2>Your Info</h2>
-                <div class="client-info" id="client-info">
-                    <p><strong>ID:</strong> <span id="your-id">-</span></p>
-                    <p><strong>Name:</strong> <span id="your-name">-</span></p>
-                </div>
-
-                <h2>Connected Players (<span id="client-count">0</span>)</h2>
-                <ul class="clients-list" id="clients-list">
-                    <li class="empty-state">No clients connected</li>
-                </ul>
-            </aside>
-
             <main class="game-area">
                 <div class="puzzle-board" id="puzzle-board">
                     <div class="puzzle-grid" id="puzzle-grid">

@@ -4,10 +4,7 @@ let myClientId = null;
 
 // DOM elements
 const connectionStatus = document.getElementById('connection-status');
-const yourId = document.getElementById('your-id');
-const yourName = document.getElementById('your-name');
 const clientCount = document.getElementById('client-count');
-const clientsList = document.getElementById('clients-list');
 
 // Connect to WebSocket server
 function connect() {
@@ -49,8 +46,6 @@ function handleMessage(data) {
     switch (data.type) {
         case 'welcome':
             myClientId = data.clientId;
-            yourId.textContent = data.clientId;
-            yourName.textContent = `Player ${data.clientId}`;
             console.log(data.message);
             break;
 
@@ -72,43 +67,12 @@ function updateConnectionStatus(connected) {
         connectionStatus.textContent = 'Disconnected';
         connectionStatus.className = 'status disconnected';
         myClientId = null;
-        yourId.textContent = '-';
-        yourName.textContent = '-';
     }
 }
 
 // Update the list of connected clients
 function updateClientsList(clients) {
     clientCount.textContent = clients.length;
-    
-    if (clients.length === 0) {
-        clientsList.innerHTML = '<li class="empty-state">No clients connected</li>';
-        return;
-    }
-
-    clientsList.innerHTML = '';
-    
-    clients.forEach(client => {
-        const li = document.createElement('li');
-        li.className = 'client-item';
-        
-        // Highlight the current client
-        if (client.id === myClientId) {
-            li.classList.add('current');
-        }
-
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'client-name';
-        nameDiv.textContent = client.name;
-
-        const idDiv = document.createElement('div');
-        idDiv.className = 'client-id';
-        idDiv.textContent = `ID: ${client.id} • Connected: ${new Date(client.connectedAt).toLocaleTimeString()}`;
-
-        li.appendChild(nameDiv);
-        li.appendChild(idDiv);
-        clientsList.appendChild(li);
-    });
 }
 
 // Send a message to the server
