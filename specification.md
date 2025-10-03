@@ -66,17 +66,33 @@ Jigsaw Puzzle Multi is a real-time multiplayer jigsaw puzzle game where multiple
 - No session management or user authentication (yet)
 - Server tracks connections via WebSocket instances
 
+### 5. Puzzle Display and Interaction
+
+**Description:** Users can view puzzle pieces and interact with them using drag and drop functionality.
+
+**User Experience:**
+- 3x3 jigsaw puzzle (9 pieces total) displaying a gradient circle image
+- Puzzle pieces are displayed in a horizontally scrollable tray below the game board
+- Pieces are randomly shuffled at game start
+- Drag and drop functionality for both desktop (mouse) and mobile (touch) devices
+- Pieces can only be placed in their correct positions on the puzzle board
+- Incorrect placements return pieces to the tray
+- Visual feedback: pieces show transform and shadow effects while being dragged
+- Completion message displays when all pieces are correctly placed
+- Responsive layout adapts to both desktop and mobile viewports
+
+**Technical Details:**
+- SVG-based circle image with radial gradient (300x300px total, split into 9 pieces)
+- Each piece is 100x100px with `overflow: hidden` to clip content properly
+- Image uses CSS `object-fit: none` and `object-position` to display correct portions
+- Mouse events (mousedown, mousemove, mouseup) for desktop interaction
+- Touch events (touchstart, touchmove, touchend) with `passive: false` for mobile
+- Pieces moved to `document.body` with `position: fixed` during drag for smooth movement
+- Validation logic ensures pieces snap only to correct grid positions
+- Fisher-Yates shuffle algorithm for randomizing piece order
+- Local game state - each client has independent puzzle instance
+
 ## Planned Features
-
-### 5. Puzzle Display and Interaction (Not Yet Implemented)
-
-**Future Description:** Users will be able to view puzzle pieces and interact with them.
-
-**Planned User Experience:**
-- Visual display of puzzle pieces on the game board
-- Drag and drop functionality for moving pieces
-- Snap-to-grid or snap-to-connection behavior
-- Visual feedback when pieces are correctly placed
 
 ### 6. Collaborative Puzzle Solving (Not Yet Implemented)
 
@@ -88,15 +104,22 @@ Jigsaw Puzzle Multi is a real-time multiplayer jigsaw puzzle game where multiple
 - Visual indicators showing which pieces are being manipulated by which player
 - Completion celebration when puzzle is solved
 
+**Technical Details (Planned):**
+- WebSocket message broadcasting for piece movements
+- Server-side puzzle state synchronization
+- Lock mechanism to prevent multiple players from moving the same piece
+- Player cursor indicators on the puzzle board
+
 ### 7. Puzzle Selection (Not Yet Implemented)
 
 **Future Description:** Users can choose from available puzzles or upload their own images.
 
 **Planned User Experience:**
 - Gallery of pre-loaded puzzle images
-- Difficulty selection (number of pieces)
+- Difficulty selection (number of pieces: 3x3, 4x4, 5x5)
 - Option to upload custom images
 - Puzzle preview before starting
+- Save/resume puzzle progress
 
 ## User Interface
 
@@ -113,14 +136,20 @@ Jigsaw Puzzle Multi is a real-time multiplayer jigsaw puzzle game where multiple
 - List of all connected players with details
 
 **Main Area (Center):**
-- Placeholder message: "Puzzle board will appear here"
-- Currently shows that puzzle functionality is coming soon
+- 3x3 puzzle board grid (300x300px total)
+- Each grid slot is 100x100px with light border
+- Puzzle board has dashed border and light gray background
+- Below the board: horizontally scrollable pieces tray
+- Pieces tray displays all unplaced puzzle pieces
+- Visual completion message overlay when puzzle is solved
 
 **Styling:**
 - Purple gradient background
 - White card-based UI elements
 - Clean, modern design with rounded corners and shadows
 - Responsive layout (adapts to mobile screens)
+- Puzzle pieces have rounded corners and shadow effects during drag
+- Smooth transitions for piece movements and interactions
 
 ## Message Protocol
 
@@ -171,12 +200,16 @@ Currently, the following message types are supported:
 ### Compatibility
 - Works in modern web browsers (Chrome, Firefox, Safari, Edge)
 - Responsive design for desktop and mobile devices
+- Touch support for mobile devices (iOS Safari, Android Chrome)
+- Mouse support for desktop devices
 - No authentication required (for development phase)
 
 ### Accessibility
 - Semantic HTML structure
 - Readable fonts and color contrast
 - Clear visual feedback for interactive elements
+- Touch-friendly UI elements (100x100px minimum touch targets)
+- Keyboard navigation support (planned)
 
 ---
 
