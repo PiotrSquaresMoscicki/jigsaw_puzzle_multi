@@ -1,13 +1,15 @@
 // WebSocket connection
 let ws;
 let myClientId = null;
+let clients = [];
+let playersListExpanded = false;
 
 // DOM elements
 const connectionStatus = document.getElementById('connection-status');
-const yourId = document.getElementById('your-id');
-const yourName = document.getElementById('your-name');
 const clientCount = document.getElementById('client-count');
-const clientsList = document.getElementById('clients-list');
+const playersToggle = document.getElementById('players-toggle');
+const playersList = document.getElementById('players-list');
+const expandIcon = document.getElementById('expand-icon');
 
 // Connect to WebSocket server
 function connect() {
@@ -49,8 +51,6 @@ function handleMessage(data) {
     switch (data.type) {
         case 'welcome':
             myClientId = data.clientId;
-            yourId.textContent = data.clientId;
-            yourName.textContent = `Player ${data.clientId}`;
             console.log(data.message);
             break;
 
@@ -72,43 +72,59 @@ function updateConnectionStatus(connected) {
         connectionStatus.textContent = 'Disconnected';
         connectionStatus.className = 'status disconnected';
         myClientId = null;
-        yourId.textContent = '-';
-        yourName.textContent = '-';
     }
 }
 
 // Update the list of connected clients
-function updateClientsList(clients) {
+function updateClientsList(clientsData) {
+    clients = clientsData;
     clientCount.textContent = clients.length;
-    
+    renderPlayersList();
+}
+
+// Render the players list
+function renderPlayersList() {
     if (clients.length === 0) {
-        clientsList.innerHTML = '<li class="empty-state">No clients connected</li>';
+        playersList.innerHTML = '<div style="padding: 6px 8px; color: #999; font-size: 12px; font-style: italic;">No players</div>';
         return;
     }
 
-    clientsList.innerHTML = '';
+    playersList.innerHTML = '';
     
     clients.forEach(client => {
-        const li = document.createElement('li');
-        li.className = 'client-item';
+        const playerItem = document.createElement('div');
+        playerItem.className = 'player-item';
         
         // Highlight the current client
         if (client.id === myClientId) {
-            li.classList.add('current');
+            playerItem.classList.add('current');
         }
 
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'client-name';
-        nameDiv.textContent = client.name;
+        const playerName = document.createElement('div');
+        playerName.className = 'player-name';
+        playerName.textContent = client.name;
 
-        const idDiv = document.createElement('div');
-        idDiv.className = 'client-id';
-        idDiv.textContent = `ID: ${client.id} • Connected: ${new Date(client.connectedAt).toLocaleTimeString()}`;
+        const playerId = document.createElement('div');
+        playerId.className = 'player-id';
+        playerId.textContent = `ID: ${client.id}`;
 
-        li.appendChild(nameDiv);
-        li.appendChild(idDiv);
-        clientsList.appendChild(li);
+        playerItem.appendChild(playerName);
+        playerItem.appendChild(playerId);
+        playersList.appendChild(playerItem);
     });
+}
+
+// Toggle players list expansion
+function togglePlayersList() {
+    playersListExpanded = !playersListExpanded;
+    
+    if (playersListExpanded) {
+        playersList.classList.add('expanded');
+        expandIcon.classList.add('expanded');
+    } else {
+        playersList.classList.remove('expanded');
+        expandIcon.classList.remove('expanded');
+    }
 }
 
 // Send a message to the server
@@ -122,3 +138,6 @@ function sendMessage(message) {
 
 // Initialize connection when page loads
 connect();
+
+// Add click handler for players list toggle
+playersToggle.addEventListener('click', togglePlayersList);
