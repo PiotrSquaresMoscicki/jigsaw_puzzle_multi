@@ -1,7 +1,14 @@
 // Puzzle Game Logic
 class PuzzleGame {
-    constructor() {
-        this.gridSize = 3; // 3x3 puzzle
+    constructor(config = {}) {
+        this.complexityLevel = config.complexityLevel || 3;
+        this.customImageUrl = config.customImageUrl || null;
+        this.customImageWidth = config.customImageWidth || 300;
+        this.customImageHeight = config.customImageHeight || 300;
+        
+        // Calculate grid dimensions based on complexity and aspect ratio
+        this.calculateGridDimensions();
+        
         this.pieceSize = 100; // pixels
         this.pieces = [];
         this.slots = [];
@@ -12,9 +19,39 @@ class PuzzleGame {
         this.init();
     }
 
+    calculateGridDimensions() {
+        // If we have a custom image, use its dimensions
+        if (this.customImageUrl) {
+            const aspectRatio = this.customImageWidth / this.customImageHeight;
+            
+            if (aspectRatio >= 1) {
+                // Landscape or square: shorter edge is height
+                this.gridRows = this.complexityLevel;
+                this.gridCols = Math.round(this.complexityLevel * aspectRatio);
+            } else {
+                // Portrait: shorter edge is width
+                this.gridCols = this.complexityLevel;
+                this.gridRows = Math.round(this.complexityLevel / aspectRatio);
+            }
+        } else {
+            // Default SVG is square
+            this.gridRows = this.complexityLevel;
+            this.gridCols = this.complexityLevel;
+        }
+        
+        this.gridSize = this.gridRows; // Keep for backward compatibility
+    }
+
     init() {
-        // Generate the circle image as SVG
-        this.generateCircleImage();
+        // Generate the image (either default circle or custom)
+        if (this.customImageUrl) {
+            this.imageDataUrl = this.customImageUrl;
+        } else {
+            this.generateCircleImage();
+        }
+        
+        // Update puzzle grid CSS
+        this.updatePuzzleGridCSS();
         
         // Create puzzle slots
         this.createPuzzleSlots();
@@ -26,18 +63,25 @@ class PuzzleGame {
         this.shufflePieces();
     }
 
+    updatePuzzleGridCSS() {
+        const grid = document.getElementById('puzzle-grid');
+        grid.style.gridTemplateColumns = `repeat(${this.gridCols}, ${this.pieceSize}px)`;
+        grid.style.gridTemplateRows = `repeat(${this.gridRows}, ${this.pieceSize}px)`;
+    }
+
     generateCircleImage() {
-        // Create an SVG circle image divided into a 3x3 grid
-        const totalSize = this.pieceSize * this.gridSize;
+        // Create an SVG circle image divided into the grid
+        const totalWidth = this.pieceSize * this.gridCols;
+        const totalHeight = this.pieceSize * this.gridRows;
         const svg = `
-            <svg width="${totalSize}" height="${totalSize}" xmlns="http://www.w3.org/2000/svg">
+            <svg width="${totalWidth}" height="${totalHeight}" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <radialGradient id="circleGradient">
                         <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
                         <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
                     </radialGradient>
                 </defs>
-                <circle cx="${totalSize/2}" cy="${totalSize/2}" r="${totalSize/2 - 10}" 
+                <circle cx="${totalWidth/2}" cy="${totalHeight/2}" r="${Math.min(totalWidth, totalHeight)/2 - 10}" 
                         fill="url(#circleGradient)" stroke="#333" stroke-width="3"/>
             </svg>
         `;
@@ -47,9 +91,10 @@ class PuzzleGame {
     createPuzzleSlots() {
         const grid = document.getElementById('puzzle-grid');
         grid.innerHTML = '';
+        this.slots = [];
         
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
+        for (let row = 0; row < this.gridRows; row++) {
+            for (let col = 0; col < this.gridCols; col++) {
                 const slot = document.createElement('div');
                 slot.className = 'puzzle-slot';
                 slot.dataset.row = row;
@@ -64,9 +109,10 @@ class PuzzleGame {
     createPuzzlePieces() {
         const container = document.getElementById('pieces-container');
         container.innerHTML = '';
+        this.pieces = [];
         
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
+        for (let row = 0; row < this.gridRows; row++) {
+            for (let col = 0; col < this.gridCols; col++) {
                 const piece = document.createElement('div');
                 piece.className = 'puzzle-piece';
                 piece.dataset.correctRow = row;
@@ -77,8 +123,8 @@ class PuzzleGame {
                 img.src = this.imageDataUrl;
                 img.style.objectFit = 'none';
                 img.style.objectPosition = `-${col * this.pieceSize}px -${row * this.pieceSize}px`;
-                img.style.width = `${this.pieceSize * this.gridSize}px`;
-                img.style.height = `${this.pieceSize * this.gridSize}px`;
+                img.style.width = `${this.pieceSize * this.gridCols}px`;
+                img.style.height = `${this.pieceSize * this.gridRows}px`;
                 
                 piece.appendChild(img);
                 
@@ -300,7 +346,87 @@ class PuzzleGame {
     }
 }
 
+// Global game instance
+let currentGame = null;
+
 // Initialize the puzzle game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new PuzzleGame();
+    currentGame = new PuzzleGame();
+    
+    // Set up new game modal controls
+    const newGameBtn = document.getElementById('new-game-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const imageUpload = document.getElementById('image-upload');
+    const imagePreview = document.getElementById('image-preview');
+    const complexitySlider = document.getElementById('complexity-slider');
+    const complexityValue = document.getElementById('complexity-value');
+    
+    let selectedImageUrl = null;
+    let selectedImageWidth = 300;
+    let selectedImageHeight = 300;
+    
+    // Update complexity display
+    complexitySlider.addEventListener('input', (e) => {
+        complexityValue.textContent = e.target.value;
+    });
+    
+    // Handle image upload
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    selectedImageUrl = event.target.result;
+                    selectedImageWidth = img.width;
+                    selectedImageHeight = img.height;
+                    imagePreview.src = event.target.result;
+                    imagePreview.classList.add('visible');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            selectedImageUrl = null;
+            imagePreview.classList.remove('visible');
+        }
+    });
+    
+    // Show modal
+    newGameBtn.addEventListener('click', () => {
+        settingsModal.classList.add('active');
+    });
+    
+    // Hide modal
+    cancelBtn.addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+    });
+    
+    // Close modal on outside click
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.classList.remove('active');
+        }
+    });
+    
+    // Start new game
+    startGameBtn.addEventListener('click', () => {
+        const complexity = parseInt(complexitySlider.value);
+        
+        const config = {
+            complexityLevel: complexity,
+            customImageUrl: selectedImageUrl,
+            customImageWidth: selectedImageWidth,
+            customImageHeight: selectedImageHeight
+        };
+        
+        // Create new game instance
+        currentGame = new PuzzleGame(config);
+        
+        // Hide modal
+        settingsModal.classList.remove('active');
+    });
 });
