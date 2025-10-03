@@ -397,6 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Show modal
     newGameBtn.addEventListener('click', () => {
+        // Reset form to defaults
+        imageUpload.value = '';
+        imagePreview.classList.remove('visible');
+        complexitySlider.value = 3;
+        complexityValue.textContent = '3';
+        selectedImageUrl = null;
+        selectedImageWidth = 300;
+        selectedImageHeight = 300;
+        
         settingsModal.classList.add('active');
     });
     
