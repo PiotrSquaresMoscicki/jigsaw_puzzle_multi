@@ -125,6 +125,8 @@ class PuzzleGame {
         document.body.appendChild(piece);
         piece.style.position = 'fixed';
         piece.style.zIndex = '1000';
+        piece.style.width = this.pieceSize + 'px';
+        piece.style.height = this.pieceSize + 'px';
         this.movePiece(e.clientX, e.clientY);
         
         document.addEventListener('mousemove', this.onMouseMove);
@@ -165,6 +167,8 @@ class PuzzleGame {
         document.body.appendChild(piece);
         piece.style.position = 'fixed';
         piece.style.zIndex = '1000';
+        piece.style.width = this.pieceSize + 'px';
+        piece.style.height = this.pieceSize + 'px';
         this.movePiece(touch.clientX, touch.clientY);
         
         piece.addEventListener('touchmove', this.onTouchMove, { passive: false });
@@ -244,6 +248,8 @@ class PuzzleGame {
         piece.style.left = '0';
         piece.style.top = '0';
         piece.style.zIndex = 'auto';
+        piece.style.width = '';
+        piece.style.height = '';
         
         // Mark as placed
         piece.dataset.placed = 'true';
@@ -260,6 +266,8 @@ class PuzzleGame {
         piece.style.left = '0';
         piece.style.top = '0';
         piece.style.zIndex = 'auto';
+        piece.style.width = '';
+        piece.style.height = '';
         
         // Return to original parent or pieces container
         if (this.originalParent && this.originalParent.id === 'pieces-container') {
