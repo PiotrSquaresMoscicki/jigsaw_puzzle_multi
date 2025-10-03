@@ -1,10 +1,15 @@
 // WebSocket connection
 let ws;
 let myClientId = null;
+let clients = [];
+let playersListExpanded = false;
 
 // DOM elements
 const connectionStatus = document.getElementById('connection-status');
 const clientCount = document.getElementById('client-count');
+const playersToggle = document.getElementById('players-toggle');
+const playersList = document.getElementById('players-list');
+const expandIcon = document.getElementById('expand-icon');
 
 // Connect to WebSocket server
 function connect() {
@@ -71,8 +76,55 @@ function updateConnectionStatus(connected) {
 }
 
 // Update the list of connected clients
-function updateClientsList(clients) {
+function updateClientsList(clientsData) {
+    clients = clientsData;
     clientCount.textContent = clients.length;
+    renderPlayersList();
+}
+
+// Render the players list
+function renderPlayersList() {
+    if (clients.length === 0) {
+        playersList.innerHTML = '<div style="padding: 6px 8px; color: #999; font-size: 12px; font-style: italic;">No players</div>';
+        return;
+    }
+
+    playersList.innerHTML = '';
+    
+    clients.forEach(client => {
+        const playerItem = document.createElement('div');
+        playerItem.className = 'player-item';
+        
+        // Highlight the current client
+        if (client.id === myClientId) {
+            playerItem.classList.add('current');
+        }
+
+        const playerName = document.createElement('div');
+        playerName.className = 'player-name';
+        playerName.textContent = client.name;
+
+        const playerId = document.createElement('div');
+        playerId.className = 'player-id';
+        playerId.textContent = `ID: ${client.id}`;
+
+        playerItem.appendChild(playerName);
+        playerItem.appendChild(playerId);
+        playersList.appendChild(playerItem);
+    });
+}
+
+// Toggle players list expansion
+function togglePlayersList() {
+    playersListExpanded = !playersListExpanded;
+    
+    if (playersListExpanded) {
+        playersList.classList.add('expanded');
+        expandIcon.classList.add('expanded');
+    } else {
+        playersList.classList.remove('expanded');
+        expandIcon.classList.remove('expanded');
+    }
 }
 
 // Send a message to the server
@@ -86,3 +138,6 @@ function sendMessage(message) {
 
 // Initialize connection when page loads
 connect();
+
+// Add click handler for players list toggle
+playersToggle.addEventListener('click', togglePlayersList);

@@ -45,6 +45,19 @@
             gap: 8px;
         }
 
+        .status-overlay-row.clickable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+            margin: -4px -6px;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .status-overlay-row.clickable:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
         .status {
             display: inline-block;
             padding: 4px 10px;
@@ -71,6 +84,55 @@
         .players-count {
             color: #333;
             font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 10px;
+            color: #999;
+            transition: transform 0.2s;
+            margin-left: 2px;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .players-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            opacity: 0;
+        }
+
+        .players-list.expanded {
+            max-height: 300px;
+            overflow-y: auto;
+            opacity: 1;
+        }
+
+        .player-item {
+            padding: 6px 8px;
+            margin-top: 6px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 4px;
+            font-size: 12px;
+            border-left: 2px solid #667eea;
+        }
+
+        .player-item.current {
+            border-left-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .player-id {
+            color: #666;
+            font-size: 11px;
+            margin-top: 2px;
         }
 
         .main-content {
@@ -211,9 +273,13 @@
             <span class="status-label">Connection:</span>
             <span class="status disconnected" id="connection-status">Disconnected</span>
         </div>
-        <div class="status-overlay-row">
+        <div class="status-overlay-row clickable" id="players-toggle">
             <span class="status-label">Players:</span>
             <span class="players-count" id="client-count">0</span>
+            <span class="expand-icon" id="expand-icon">▼</span>
+        </div>
+        <div class="players-list" id="players-list">
+            <!-- Player list will be populated here -->
         </div>
     </div>
 
