@@ -10,7 +10,7 @@ class PuzzleGame {
         this.calculateGridDimensions();
         
         this.pieceSize = 100; // pixels
-        this.snapThreshold = 20; // Distance threshold for snapping in pixels
+        this.snapThreshold = 10; // Distance threshold for snapping in pixels (10% of piece size)
         this.pieces = [];
         this.pieceGroups = []; // Array of piece groups (snapped together pieces)
         this.draggedGroup = null; // The group being dragged
@@ -163,16 +163,20 @@ class PuzzleGame {
             
             // Apply the position immediately
             this.updateGroupPositions(this.draggedGroup);
+            
+            // For pieces from tray, set offset to center of piece
+            this.touchOffsetX = this.pieceSize / 2;
+            this.touchOffsetY = this.pieceSize / 2;
+        } else {
+            // For pieces already on canvas, calculate offset from current position
+            const firstPiece = this.draggedGroup.pieces[0];
+            const rect = firstPiece.getBoundingClientRect();
+            this.touchOffsetX = e.clientX - rect.left;
+            this.touchOffsetY = e.clientY - rect.top;
         }
         
         // Add dragging class to all pieces in group
         this.draggedGroup.pieces.forEach(p => p.classList.add('dragging'));
-        
-        // Calculate offset from first piece in group
-        const firstPiece = this.draggedGroup.pieces[0];
-        const rect = firstPiece.getBoundingClientRect();
-        this.touchOffsetX = e.clientX - rect.left;
-        this.touchOffsetY = e.clientY - rect.top;
         
         this.movePieceGroup(e.clientX, e.clientY);
         
@@ -220,20 +224,25 @@ class PuzzleGame {
             
             // Apply the position immediately
             this.updateGroupPositions(this.draggedGroup);
+            
+            // For pieces from tray, set offset to center of piece
+            this.touchOffsetX = this.pieceSize / 2;
+            this.touchOffsetY = this.pieceSize / 2;
+        } else {
+            // For pieces already on canvas, calculate offset from current position
+            const firstPiece = this.draggedGroup.pieces[0];
+            const rect = firstPiece.getBoundingClientRect();
+            this.touchOffsetX = touch.clientX - rect.left;
+            this.touchOffsetY = touch.clientY - rect.top;
         }
         
         // Add dragging class to all pieces in group
         this.draggedGroup.pieces.forEach(p => p.classList.add('dragging'));
         
-        // Calculate offset from first piece in group
-        const firstPiece = this.draggedGroup.pieces[0];
-        const rect = firstPiece.getBoundingClientRect();
-        this.touchOffsetX = touch.clientX - rect.left;
-        this.touchOffsetY = touch.clientY - rect.top;
-        
         this.movePieceGroup(touch.clientX, touch.clientY);
         
         // Attach to first piece only
+        const firstPiece = this.draggedGroup.pieces[0];
         firstPiece.addEventListener('touchmove', this.onTouchMove, { passive: false });
         firstPiece.addEventListener('touchend', this.onTouchEnd, { passive: false });
     }
@@ -368,63 +377,67 @@ class PuzzleGame {
     }
 
     getExpectedOffset(direction) {
+        // Returns the expected offset FROM adjacent piece TO dragged piece
+        // E.g., if direction is 'left', adjacent is to the left, so dragged should be +pieceSize to the right
         switch (direction) {
             case 'top':
-                return { x: 0, y: -this.pieceSize };
+                return { x: 0, y: this.pieceSize };  // Dragged is below adjacent
             case 'bottom':
-                return { x: 0, y: this.pieceSize };
+                return { x: 0, y: -this.pieceSize };  // Dragged is above adjacent
             case 'left':
-                return { x: -this.pieceSize, y: 0 };
+                return { x: this.pieceSize, y: 0 };  // Dragged is to the right of adjacent
             case 'right':
-                return { x: this.pieceSize, y: 0 };
+                return { x: -this.pieceSize, y: 0 };  // Dragged is to the left of adjacent
             default:
                 return { x: 0, y: 0 };
         }
     }
 
     mergeGroups(draggedGroup, targetGroup, draggedPiece, targetPiece, direction) {
-        // Calculate the offset needed to align the pieces
-        const draggedRow = parseInt(draggedPiece.dataset.correctRow);
-        const draggedCol = parseInt(draggedPiece.dataset.correctCol);
-        const targetRow = parseInt(targetPiece.dataset.correctRow);
-        const targetCol = parseInt(targetPiece.dataset.correctCol);
+        // Calculate the exact position where draggedPiece should be relative to targetPiece
+        const expectedOffset = this.getExpectedOffset(direction);
         
-        // Calculate the offset from targetGroup's anchor to draggedGroup's anchor
-        const rowDiff = draggedRow - targetRow;
-        const colDiff = draggedCol - targetCol;
+        // Get current positions
+        const targetRect = targetPiece.getBoundingClientRect();
+        const draggedRect = draggedPiece.getBoundingClientRect();
+        const grid = document.getElementById('puzzle-grid');
+        const gridRect = grid.getBoundingClientRect();
         
-        // The draggedGroup needs to be positioned relative to targetGroup
-        // such that draggedPiece aligns with targetPiece
-        const targetFirstRow = parseInt(targetGroup.pieces[0].dataset.correctRow);
-        const targetFirstCol = parseInt(targetGroup.pieces[0].dataset.correctCol);
-        const draggedFirstRow = parseInt(draggedGroup.pieces[0].dataset.correctRow);
-        const draggedFirstCol = parseInt(draggedGroup.pieces[0].dataset.correctCol);
+        // Calculate where draggedPiece should be (in grid coordinates)
+        const targetPieceGridX = parseFloat(targetPiece.style.left) || 0;
+        const targetPieceGridY = parseFloat(targetPiece.style.top) || 0;
+        const correctDraggedX = targetPieceGridX + expectedOffset.x;
+        const correctDraggedY = targetPieceGridY + expectedOffset.y;
         
-        // Offset of the dragged group relative to target group
-        const mergeOffsetX = (targetFirstCol - draggedFirstCol + colDiff) * this.pieceSize;
-        const mergeOffsetY = (targetFirstRow - draggedFirstRow + rowDiff) * this.pieceSize;
+        // Calculate the adjustment needed for the draggedGroup's anchor
+        const draggedPieceCurrentX = parseFloat(draggedPiece.style.left) || 0;
+        const draggedPieceCurrentY = parseFloat(draggedPiece.style.top) || 0;
+        const adjustX = correctDraggedX - draggedPieceCurrentX;
+        const adjustY = correctDraggedY - draggedPieceCurrentY;
         
-        // Merge pieces into target group
+        // Adjust the draggedGroup's anchor position
+        draggedGroup.x += adjustX;
+        draggedGroup.y += adjustY;
+        
+        // Update positions of pieces in draggedGroup to reflect the snap
+        this.updateGroupPositions(draggedGroup);
+        
+        // Now merge the pieces into target group
         draggedGroup.pieces.forEach(piece => {
             targetGroup.pieces.push(piece);
         });
         
-        // Update target group's position to accommodate all pieces
-        // The anchor remains the first piece, so we adjust draggedGroup pieces to align
-        targetGroup.x = targetGroup.x;
-        targetGroup.y = targetGroup.y;
+        // Recalculate group anchor to use target group's first piece
+        const targetFirstRow = parseInt(targetGroup.pieces[0].dataset.correctRow);
+        const targetFirstCol = parseInt(targetGroup.pieces[0].dataset.correctCol);
         
-        // Recalculate to use target group's first piece as anchor
-        const newAnchorRow = targetFirstRow;
-        const newAnchorCol = targetFirstCol;
-        
-        // Update positions of all pieces
+        // Update positions of all pieces in the merged group
         targetGroup.pieces.forEach(piece => {
             const row = parseInt(piece.dataset.correctRow);
             const col = parseInt(piece.dataset.correctCol);
             
-            const offsetX = (col - newAnchorCol) * this.pieceSize;
-            const offsetY = (row - newAnchorRow) * this.pieceSize;
+            const offsetX = (col - targetFirstCol) * this.pieceSize;
+            const offsetY = (row - targetFirstRow) * this.pieceSize;
             
             piece.style.left = (targetGroup.x + offsetX) + 'px';
             piece.style.top = (targetGroup.y + offsetY) + 'px';
