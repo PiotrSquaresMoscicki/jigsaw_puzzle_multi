@@ -1,4 +1,4 @@
-// Puzzle Game Logic
+// Puzzle Game Logic with Snapping
 class PuzzleGame {
     constructor(config = {}) {
         this.complexityLevel = config.complexityLevel || 3;
@@ -10,9 +10,10 @@ class PuzzleGame {
         this.calculateGridDimensions();
         
         this.pieceSize = 100; // pixels
+        this.snapThreshold = 10; // Distance threshold for snapping in pixels (10% of piece size)
         this.pieces = [];
-        this.slots = [];
-        this.draggedPiece = null;
+        this.pieceGroups = []; // Array of piece groups (snapped together pieces)
+        this.draggedGroup = null; // The group being dragged
         this.touchOffsetX = 0;
         this.touchOffsetY = 0;
         
@@ -50,23 +51,15 @@ class PuzzleGame {
             this.generateCircleImage();
         }
         
-        // Update puzzle grid CSS
-        this.updatePuzzleGridCSS();
-        
-        // Create puzzle slots
-        this.createPuzzleSlots();
+        // Clear the puzzle grid (no slots needed)
+        const grid = document.getElementById('puzzle-grid');
+        grid.innerHTML = '';
         
         // Create puzzle pieces
         this.createPuzzlePieces();
         
-        // Shuffle pieces
+        // Shuffle pieces in tray
         this.shufflePieces();
-    }
-
-    updatePuzzleGridCSS() {
-        const grid = document.getElementById('puzzle-grid');
-        grid.style.gridTemplateColumns = `repeat(${this.gridCols}, ${this.pieceSize}px)`;
-        grid.style.gridTemplateRows = `repeat(${this.gridRows}, ${this.pieceSize}px)`;
     }
 
     generateCircleImage() {
@@ -88,36 +81,19 @@ class PuzzleGame {
         this.imageDataUrl = 'data:image/svg+xml;base64,' + btoa(svg);
     }
 
-    createPuzzleSlots() {
-        const grid = document.getElementById('puzzle-grid');
-        grid.innerHTML = '';
-        this.slots = [];
-        
-        for (let row = 0; row < this.gridRows; row++) {
-            for (let col = 0; col < this.gridCols; col++) {
-                const slot = document.createElement('div');
-                slot.className = 'puzzle-slot';
-                slot.dataset.row = row;
-                slot.dataset.col = col;
-                slot.dataset.filled = 'false';
-                grid.appendChild(slot);
-                this.slots.push(slot);
-            }
-        }
-    }
-
     createPuzzlePieces() {
         const container = document.getElementById('pieces-container');
         container.innerHTML = '';
         this.pieces = [];
+        this.pieceGroups = [];
         
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < this.gridCols; col++) {
                 const piece = document.createElement('div');
-                piece.className = 'puzzle-piece';
+                piece.className = 'puzzle-piece in-tray';
                 piece.dataset.correctRow = row;
                 piece.dataset.correctCol = col;
-                piece.dataset.placed = 'false';
+                piece.dataset.inTray = 'true';
                 
                 const img = document.createElement('img');
                 img.src = this.imageDataUrl;
@@ -136,6 +112,13 @@ class PuzzleGame {
                 
                 container.appendChild(piece);
                 this.pieces.push(piece);
+                
+                // Each piece starts in its own group
+                this.pieceGroups.push({
+                    pieces: [piece],
+                    x: 0, // Will be set when placed on board
+                    y: 0
+                });
             }
         }
     }
@@ -151,41 +134,63 @@ class PuzzleGame {
         }
     }
 
+    // Find the group containing a piece
+    findGroupForPiece(piece) {
+        return this.pieceGroups.find(group => group.pieces.includes(piece));
+    }
+
     // Mouse drag handlers (desktop)
     onDragStart(e, piece) {
-        if (piece.dataset.placed === 'true') return;
-        
         e.preventDefault();
-        this.draggedPiece = piece;
-        piece.classList.add('dragging');
         
-        // Calculate offset
-        const rect = piece.getBoundingClientRect();
-        this.touchOffsetX = e.clientX - rect.left;
-        this.touchOffsetY = e.clientY - rect.top;
+        // Find the group this piece belongs to
+        this.draggedGroup = this.findGroupForPiece(piece);
+        if (!this.draggedGroup) return;
         
-        // Store original parent
-        this.originalParent = piece.parentElement;
+        // If piece is in tray, get it from tray first
+        if (piece.dataset.inTray === 'true') {
+            const grid = document.getElementById('puzzle-grid');
+            const gridRect = grid.getBoundingClientRect();
+            
+            // Place piece in center of grid initially
+            piece.dataset.inTray = 'false';
+            piece.classList.remove('in-tray');
+            grid.appendChild(piece);
+            
+            // Set initial position (center of grid)
+            this.draggedGroup.x = gridRect.width / 2 - this.pieceSize / 2;
+            this.draggedGroup.y = gridRect.height / 2 - this.pieceSize / 2;
+            
+            // Apply the position immediately
+            this.updateGroupPositions(this.draggedGroup);
+            
+            // For pieces from tray, set offset to center of piece
+            this.touchOffsetX = this.pieceSize / 2;
+            this.touchOffsetY = this.pieceSize / 2;
+        } else {
+            // For pieces already on canvas, calculate offset from current position
+            const firstPiece = this.draggedGroup.pieces[0];
+            const rect = firstPiece.getBoundingClientRect();
+            this.touchOffsetX = e.clientX - rect.left;
+            this.touchOffsetY = e.clientY - rect.top;
+        }
         
-        // Move to body for absolute positioning
-        document.body.appendChild(piece);
-        piece.style.position = 'fixed';
-        piece.style.zIndex = '1000';
-        piece.style.width = this.pieceSize + 'px';
-        piece.style.height = this.pieceSize + 'px';
-        this.movePiece(e.clientX, e.clientY);
+        // Add dragging class to all pieces in group
+        this.draggedGroup.pieces.forEach(p => p.classList.add('dragging'));
+        
+        this.movePieceGroup(e.clientX, e.clientY);
         
         document.addEventListener('mousemove', this.onMouseMove);
         document.addEventListener('mouseup', this.onMouseUp);
     }
 
     onMouseMove = (e) => {
-        if (!this.draggedPiece) return;
-        this.movePiece(e.clientX, e.clientY);
+        if (!this.draggedGroup) return;
+        this.movePieceGroup(e.clientX, e.clientY);
     }
 
     onMouseUp = (e) => {
-        if (!this.draggedPiece) return;
+        if (!this.draggedGroup) return;
         
         this.handleDrop(e.clientX, e.clientY);
         
@@ -195,139 +200,259 @@ class PuzzleGame {
 
     // Touch handlers (mobile)
     onTouchStart(e, piece) {
-        if (piece.dataset.placed === 'true') return;
-        
         e.preventDefault();
-        this.draggedPiece = piece;
-        piece.classList.add('dragging');
+        
+        // Find the group this piece belongs to
+        this.draggedGroup = this.findGroupForPiece(piece);
+        if (!this.draggedGroup) return;
         
         const touch = e.touches[0];
-        const rect = piece.getBoundingClientRect();
-        this.touchOffsetX = touch.clientX - rect.left;
-        this.touchOffsetY = touch.clientY - rect.top;
         
-        // Store original parent
-        this.originalParent = piece.parentElement;
+        // If piece is in tray, get it from tray first
+        if (piece.dataset.inTray === 'true') {
+            const grid = document.getElementById('puzzle-grid');
+            const gridRect = grid.getBoundingClientRect();
+            
+            // Place piece in center of grid initially
+            piece.dataset.inTray = 'false';
+            piece.classList.remove('in-tray');
+            grid.appendChild(piece);
+            
+            // Set initial position (center of grid)
+            this.draggedGroup.x = gridRect.width / 2 - this.pieceSize / 2;
+            this.draggedGroup.y = gridRect.height / 2 - this.pieceSize / 2;
+            
+            // Apply the position immediately
+            this.updateGroupPositions(this.draggedGroup);
+            
+            // For pieces from tray, set offset to center of piece
+            this.touchOffsetX = this.pieceSize / 2;
+            this.touchOffsetY = this.pieceSize / 2;
+        } else {
+            // For pieces already on canvas, calculate offset from current position
+            const firstPiece = this.draggedGroup.pieces[0];
+            const rect = firstPiece.getBoundingClientRect();
+            this.touchOffsetX = touch.clientX - rect.left;
+            this.touchOffsetY = touch.clientY - rect.top;
+        }
         
-        // Move to body for absolute positioning
-        document.body.appendChild(piece);
-        piece.style.position = 'fixed';
-        piece.style.zIndex = '1000';
-        piece.style.width = this.pieceSize + 'px';
-        piece.style.height = this.pieceSize + 'px';
-        this.movePiece(touch.clientX, touch.clientY);
+        // Add dragging class to all pieces in group
+        this.draggedGroup.pieces.forEach(p => p.classList.add('dragging'));
         
-        piece.addEventListener('touchmove', this.onTouchMove, { passive: false });
-        piece.addEventListener('touchend', this.onTouchEnd, { passive: false });
+        this.movePieceGroup(touch.clientX, touch.clientY);
+        
+        // Attach to first piece only
+        const firstPiece = this.draggedGroup.pieces[0];
+        firstPiece.addEventListener('touchmove', this.onTouchMove, { passive: false });
+        firstPiece.addEventListener('touchend', this.onTouchEnd, { passive: false });
     }
 
     onTouchMove = (e) => {
-        if (!this.draggedPiece) return;
+        if (!this.draggedGroup) return;
         e.preventDefault();
         const touch = e.touches[0];
-        this.movePiece(touch.clientX, touch.clientY);
+        this.movePieceGroup(touch.clientX, touch.clientY);
     }
 
     onTouchEnd = (e) => {
-        if (!this.draggedPiece) return;
+        if (!this.draggedGroup) return;
         e.preventDefault();
         
         const touch = e.changedTouches[0];
         this.handleDrop(touch.clientX, touch.clientY);
         
-        this.draggedPiece.removeEventListener('touchmove', this.onTouchMove);
-        this.draggedPiece.removeEventListener('touchend', this.onTouchEnd);
+        const firstPiece = this.draggedGroup.pieces[0];
+        firstPiece.removeEventListener('touchmove', this.onTouchMove);
+        firstPiece.removeEventListener('touchend', this.onTouchEnd);
     }
 
-    movePiece(clientX, clientY) {
-        if (!this.draggedPiece) return;
+    movePieceGroup(clientX, clientY) {
+        if (!this.draggedGroup) return;
         
-        this.draggedPiece.style.left = (clientX - this.touchOffsetX) + 'px';
-        this.draggedPiece.style.top = (clientY - this.touchOffsetY) + 'px';
+        const grid = document.getElementById('puzzle-grid');
+        const gridRect = grid.getBoundingClientRect();
+        
+        // Calculate new position relative to grid
+        const newX = clientX - gridRect.left - this.touchOffsetX;
+        const newY = clientY - gridRect.top - this.touchOffsetY;
+        
+        this.draggedGroup.x = newX;
+        this.draggedGroup.y = newY;
+        
+        // Update position of all pieces in group
+        this.updateGroupPositions(this.draggedGroup);
+    }
+
+    updateGroupPositions(group) {
+        // Calculate the offset from the first piece's correct position
+        const firstPiece = group.pieces[0];
+        const firstRow = parseInt(firstPiece.dataset.correctRow);
+        const firstCol = parseInt(firstPiece.dataset.correctCol);
+        
+        // Position each piece in the group relative to the group's position
+        group.pieces.forEach(piece => {
+            const row = parseInt(piece.dataset.correctRow);
+            const col = parseInt(piece.dataset.correctCol);
+            
+            // Calculate offset from first piece
+            const offsetX = (col - firstCol) * this.pieceSize;
+            const offsetY = (row - firstRow) * this.pieceSize;
+            
+            piece.style.left = (group.x + offsetX) + 'px';
+            piece.style.top = (group.y + offsetY) + 'px';
+        });
     }
 
     handleDrop(clientX, clientY) {
-        if (!this.draggedPiece) return;
+        if (!this.draggedGroup) return;
         
-        const piece = this.draggedPiece;
-        piece.classList.remove('dragging');
+        // Remove dragging class from all pieces
+        this.draggedGroup.pieces.forEach(p => p.classList.remove('dragging'));
         
-        // Find the slot under the cursor
-        const slot = this.findSlotAtPosition(clientX, clientY);
+        // Check if we can snap to any adjacent piece
+        const snappedGroup = this.checkForSnapping(this.draggedGroup);
         
-        if (slot && slot.dataset.filled === 'false') {
-            // Check if this is the correct position
-            const correctRow = parseInt(piece.dataset.correctRow);
-            const correctCol = parseInt(piece.dataset.correctCol);
-            const slotRow = parseInt(slot.dataset.row);
-            const slotCol = parseInt(slot.dataset.col);
+        if (snappedGroup) {
+            // Merged into another group
+            this.draggedGroup = null;
+            this.checkCompletion();
+            return;
+        }
+        
+        this.draggedGroup = null;
+        this.checkCompletion();
+    }
+
+    checkForSnapping(draggedGroup) {
+        const snapThreshold = this.snapThreshold;
+        
+        // For each piece in the dragged group
+        for (const draggedPiece of draggedGroup.pieces) {
+            const draggedRow = parseInt(draggedPiece.dataset.correctRow);
+            const draggedCol = parseInt(draggedPiece.dataset.correctCol);
             
-            if (correctRow === slotRow && correctCol === slotCol) {
-                // Correct placement
-                this.placePieceInSlot(piece, slot);
-                this.checkCompletion();
-            } else {
-                // Wrong placement - return to tray
-                this.returnPieceToTray(piece);
+            // Check all adjacent positions (up, down, left, right)
+            const adjacentPositions = [
+                { row: draggedRow - 1, col: draggedCol, direction: 'top' },
+                { row: draggedRow + 1, col: draggedCol, direction: 'bottom' },
+                { row: draggedRow, col: draggedCol - 1, direction: 'left' },
+                { row: draggedRow, col: draggedCol + 1, direction: 'right' }
+            ];
+            
+            for (const adjPos of adjacentPositions) {
+                // Find piece at this adjacent position
+                const adjacentPiece = this.pieces.find(p => 
+                    parseInt(p.dataset.correctRow) === adjPos.row &&
+                    parseInt(p.dataset.correctCol) === adjPos.col
+                );
+                
+                if (!adjacentPiece || adjacentPiece.dataset.inTray === 'true') continue;
+                
+                // Find the group of the adjacent piece
+                const adjacentGroup = this.findGroupForPiece(adjacentPiece);
+                if (!adjacentGroup || adjacentGroup === draggedGroup) continue;
+                
+                // Calculate expected position if snapped
+                const expectedOffset = this.getExpectedOffset(adjPos.direction);
+                const draggedRect = draggedPiece.getBoundingClientRect();
+                const adjacentRect = adjacentPiece.getBoundingClientRect();
+                
+                // Calculate actual offset
+                const actualOffsetX = draggedRect.left - adjacentRect.left;
+                const actualOffsetY = draggedRect.top - adjacentRect.top;
+                
+                // Check if within snap threshold
+                const distX = Math.abs(actualOffsetX - expectedOffset.x);
+                const distY = Math.abs(actualOffsetY - expectedOffset.y);
+                
+                if (distX < snapThreshold && distY < snapThreshold) {
+                    // Snap! Merge the groups
+                    this.mergeGroups(draggedGroup, adjacentGroup, draggedPiece, adjacentPiece, adjPos.direction);
+                    return adjacentGroup; // Return the merged group
+                }
             }
-        } else {
-            // No valid slot - return to tray
-            this.returnPieceToTray(piece);
         }
         
-        this.draggedPiece = null;
+        return null; // No snap occurred
     }
 
-    findSlotAtPosition(x, y) {
-        for (const slot of this.slots) {
-            const rect = slot.getBoundingClientRect();
-            if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-                return slot;
-            }
+    getExpectedOffset(direction) {
+        // Returns the expected offset FROM adjacent piece TO dragged piece
+        // E.g., if direction is 'left', adjacent is to the left, so dragged should be +pieceSize to the right
+        switch (direction) {
+            case 'top':
+                return { x: 0, y: this.pieceSize };  // Dragged is below adjacent
+            case 'bottom':
+                return { x: 0, y: -this.pieceSize };  // Dragged is above adjacent
+            case 'left':
+                return { x: this.pieceSize, y: 0 };  // Dragged is to the right of adjacent
+            case 'right':
+                return { x: -this.pieceSize, y: 0 };  // Dragged is to the left of adjacent
+            default:
+                return { x: 0, y: 0 };
         }
-        return null;
     }
 
-    placePieceInSlot(piece, slot) {
-        // Reset piece styling
-        piece.style.position = 'relative';
-        piece.style.left = '0';
-        piece.style.top = '0';
-        piece.style.zIndex = 'auto';
-        piece.style.width = '';
-        piece.style.height = '';
+    mergeGroups(draggedGroup, targetGroup, draggedPiece, targetPiece, direction) {
+        // Calculate the exact position where draggedPiece should be relative to targetPiece
+        const expectedOffset = this.getExpectedOffset(direction);
         
-        // Mark as placed
-        piece.dataset.placed = 'true';
-        piece.classList.add('placed');
-        slot.dataset.filled = 'true';
+        // Get current positions
+        const targetRect = targetPiece.getBoundingClientRect();
+        const draggedRect = draggedPiece.getBoundingClientRect();
+        const grid = document.getElementById('puzzle-grid');
+        const gridRect = grid.getBoundingClientRect();
         
-        // Move piece to slot
-        slot.appendChild(piece);
-    }
-
-    returnPieceToTray(piece) {
-        // Reset piece styling
-        piece.style.position = 'relative';
-        piece.style.left = '0';
-        piece.style.top = '0';
-        piece.style.zIndex = 'auto';
-        piece.style.width = '';
-        piece.style.height = '';
+        // Calculate where draggedPiece should be (in grid coordinates)
+        const targetPieceGridX = parseFloat(targetPiece.style.left) || 0;
+        const targetPieceGridY = parseFloat(targetPiece.style.top) || 0;
+        const correctDraggedX = targetPieceGridX + expectedOffset.x;
+        const correctDraggedY = targetPieceGridY + expectedOffset.y;
         
-        // Return to original parent or pieces container
-        if (this.originalParent && this.originalParent.id === 'pieces-container') {
-            this.originalParent.appendChild(piece);
-        } else {
-            document.getElementById('pieces-container').appendChild(piece);
+        // Calculate the adjustment needed for the draggedGroup's anchor
+        const draggedPieceCurrentX = parseFloat(draggedPiece.style.left) || 0;
+        const draggedPieceCurrentY = parseFloat(draggedPiece.style.top) || 0;
+        const adjustX = correctDraggedX - draggedPieceCurrentX;
+        const adjustY = correctDraggedY - draggedPieceCurrentY;
+        
+        // Adjust the draggedGroup's anchor position
+        draggedGroup.x += adjustX;
+        draggedGroup.y += adjustY;
+        
+        // Update positions of pieces in draggedGroup to reflect the snap
+        this.updateGroupPositions(draggedGroup);
+        
+        // Now merge the pieces into target group
+        draggedGroup.pieces.forEach(piece => {
+            targetGroup.pieces.push(piece);
+        });
+        
+        // Recalculate group anchor to use target group's first piece
+        const targetFirstRow = parseInt(targetGroup.pieces[0].dataset.correctRow);
+        const targetFirstCol = parseInt(targetGroup.pieces[0].dataset.correctCol);
+        
+        // Update positions of all pieces in the merged group
+        targetGroup.pieces.forEach(piece => {
+            const row = parseInt(piece.dataset.correctRow);
+            const col = parseInt(piece.dataset.correctCol);
+            
+            const offsetX = (col - targetFirstCol) * this.pieceSize;
+            const offsetY = (row - targetFirstRow) * this.pieceSize;
+            
+            piece.style.left = (targetGroup.x + offsetX) + 'px';
+            piece.style.top = (targetGroup.y + offsetY) + 'px';
+        });
+        
+        // Remove the dragged group from pieceGroups
+        const index = this.pieceGroups.indexOf(draggedGroup);
+        if (index > -1) {
+            this.pieceGroups.splice(index, 1);
         }
     }
 
     checkCompletion() {
-        // Check if all pieces are placed
-        const allPlaced = this.pieces.every(piece => piece.dataset.placed === 'true');
-        
-        if (allPlaced) {
+        // Check if all pieces are in one group
+        if (this.pieceGroups.length === 1) {
             this.showCompletionMessage();
         }
     }
